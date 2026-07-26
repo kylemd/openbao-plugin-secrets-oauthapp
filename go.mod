@@ -2,6 +2,8 @@ module github.com/openbao/openbao-plugin-secrets-oauthapp/v3
 
 go 1.25.0
 
+toolchain go1.26.5
+
 require (
 	github.com/coreos/go-oidc v2.5.0+incompatible
 	github.com/golangci/golangci-lint/v2 v2.12.2

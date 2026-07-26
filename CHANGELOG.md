@@ -8,6 +8,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+* Send a neutral user-agent header for OAuth provider requests when no
+  provider-specific value has been supplied.
+
 ## [3.4.0] - 2026-07-22
 
 * Ensure that tokens are only refreshed on the active node in a cluster.

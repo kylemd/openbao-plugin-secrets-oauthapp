@@ -1,0 +1,149 @@
+name: Codex Repair
+
+on:
+  workflow_run:
+    workflows:
+      - Upstream Sync
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    name: repair
+    if: github.event.workflow_run.conclusion == 'failure' && vars.CODEX_REPAIR_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out fork
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote add upstream https://github.com/openbao/openbao-plugin-secrets-oauthapp.git
+          git fetch upstream main
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.5"
+          cache: true
+
+      - name: Repair compatibility patch
+        uses: openai/codex-action@52fe01ec70a42f454c9d2ebd47598f9fd6893d56 # v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/codex/prompts/repair-upstream-sync.md
+          permission-profile: :workspace
+          safety-strategy: drop-sudo
+          allow-bots: true
+          allow-bot-users: github-actions
+          effort: high
+
+      - name: Validate repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git diff --name-only --diff-filter=U)"
+          ! git diff --quiet
+          test -z "$(gofmt -l .)"
+          go test -race ./...
+          go vet ./...
+          git diff --check
+
+      - name: Package validated repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --binary HEAD > codex-repair.patch
+          test -s codex-repair.patch
+          jq -n --arg upstream "$(git rev-parse upstream/main)" \
+            '{upstream_commit:$upstream}' > repair-meta.json
+
+      - name: Upload validated repair
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-repair-${{ github.run_id }}
+          path: |
+            codex-repair.patch
+            repair-meta.json
+          if-no-files-found: error
+          retention-days: 7
+
+  write-pr:
+    name: write-pr
+    needs: repair
+    if: needs.repair.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out fork
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download validated repair
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: codex-repair-${{ github.run_id }}
+
+      - name: Open draft repair pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="codex/repair-upstream-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
+          git apply --check codex-repair.patch
+          git apply codex-repair.patch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: repair compatibility patch after upstream sync"
+          git push origin "$branch"
+          gh pr create \
+            --draft \
+            --base main \
+            --head "$branch" \
+            --label maintenance \
+            --title "fix: repair compatibility patch after upstream sync" \
+            --body "Codex proposed this repair after an upstream-sync conflict. A read-only credential job validated formatting, the race-enabled tests, and go vet before a separate job opened this draft."
+
+  notify:
+    name: notify
+    needs:
+      - repair
+      - write-pr
+    if: >-
+      always() &&
+      github.event.workflow_run.conclusion == 'failure' &&
+      (needs.repair.result != 'success' || needs.write-pr.result != 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Record repair requirement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED_RUN: ${{ github.event.workflow_run.html_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          issue="$(gh issue list --state open --label maintenance --search '"Automated upstream sync needs repair" in:title' --json number --jq '.[0].number')"
+          if [ -z "$issue" ]; then
+            gh issue create \
+              --label maintenance \
+              --title "Automated upstream sync needs repair" \
+              --body "The upstream sync failed and Codex repair is disabled or did not validate: $FAILED_RUN. Do not include provider credentials or token material in this issue."
+          else
+            gh issue comment "$issue" --body "Another upstream sync failed: $FAILED_RUN"
+          fi

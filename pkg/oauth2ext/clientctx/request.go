@@ -9,6 +9,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const DefaultUserAgent = "OpenBao OAuth application"
+
 type roundTripper struct {
 	http.RoundTripper
 	fn func(req *http.Request) error
@@ -44,6 +46,18 @@ func WithUpdatedRequest(ctx context.Context, fn func(req *http.Request) error) c
 	}
 
 	return context.WithValue(ctx, oauth2.HTTPClient, upd)
+}
+
+// WithDefaultUserAgent adds a neutral user agent to outbound OAuth requests.
+// Existing user-agent headers are preserved so provider-specific clients can
+// still identify themselves when required.
+func WithDefaultUserAgent(ctx context.Context) context.Context {
+	return WithUpdatedRequest(ctx, func(req *http.Request) error {
+		if req.Header.Get("User-Agent") == "" {
+			req.Header.Set("User-Agent", DefaultUserAgent)
+		}
+		return nil
+	})
 }
 
 // WithUpdatedRequestBody returns a context that wraps the current OAuth2 HTTP

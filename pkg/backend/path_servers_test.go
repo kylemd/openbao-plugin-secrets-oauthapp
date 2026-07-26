@@ -2,16 +2,55 @@ package backend_test
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/backend"
+	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/oauth2ext/clientctx"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/provider"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/testutil"
 	"github.com/openbao/openbao/sdk/v2/logical"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
+
+func TestServerWriteAddsDefaultUserAgent(t *testing.T) {
+	var received string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received = r.Header.Get("User-Agent")
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	pr := provider.NewRegistry()
+	pr.MustRegister("http-check", func(ctx context.Context, vsn int, opts map[string]string) (provider.Provider, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL, http.NoBody)
+		require.NoError(t, err)
+		resp, err := oauth2.NewClient(ctx, nil).Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		return testutil.MockFactory()(ctx, vsn, opts)
+	})
+
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      backend.ServersPathPrefix + `http-check`,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"client_id": "abc",
+			"provider":  "http-check",
+		},
+	}
+
+	resp, err := b.HandleRequest(t.Context(), req)
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "response has error: %+v", resp)
+	require.Equal(t, clientctx.DefaultUserAgent, received)
+}
 
 func TestServerReadWrite(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

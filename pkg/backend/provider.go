@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/oauth2ext/clientctx"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/oauth2ext/devicecode"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/persistence"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/provider"
@@ -70,14 +71,17 @@ func (po *providerOperations) AuthCodeURL(state string, opts ...provider.AuthCod
 }
 
 func (po *providerOperations) DeviceCodeAuth(ctx context.Context, opts ...provider.DeviceCodeAuthOption) (*devicecode.Auth, bool, error) {
+	ctx = clientctx.WithDefaultUserAgent(ctx)
 	return po.provider.Public(po.entry.ClientID).DeviceCodeAuth(ctx, opts...)
 }
 
 func (po *providerOperations) DeviceCodeExchange(ctx context.Context, deviceCode string, opts ...provider.DeviceCodeExchangeOption) (*provider.Token, error) {
+	ctx = clientctx.WithDefaultUserAgent(ctx)
 	return po.provider.Public(po.entry.ClientID).DeviceCodeExchange(ctx, deviceCode, opts...)
 }
 
 func (po *providerOperations) RefreshToken(ctx context.Context, t *provider.Token, opts ...provider.RefreshTokenOption) (*provider.Token, error) {
+	ctx = clientctx.WithDefaultUserAgent(ctx)
 	if len(po.entry.ClientSecrets) == 0 {
 		return po.provider.Public(po.entry.ClientID).RefreshToken(ctx, t, opts...)
 	}
@@ -96,6 +100,7 @@ func (po *providerOperations) RefreshToken(ctx context.Context, t *provider.Toke
 }
 
 func (po *providerOperations) AuthCodeExchange(ctx context.Context, code string, opts ...provider.AuthCodeExchangeOption) (*provider.Token, error) {
+	ctx = clientctx.WithDefaultUserAgent(ctx)
 	if len(po.entry.ClientSecrets) == 0 {
 		return nil, errmark.MarkUser(provider.ErrMissingClientSecret)
 	}
@@ -114,6 +119,7 @@ func (po *providerOperations) AuthCodeExchange(ctx context.Context, code string,
 }
 
 func (po *providerOperations) ClientCredentials(ctx context.Context, opts ...provider.ClientCredentialsOption) (*provider.Token, error) {
+	ctx = clientctx.WithDefaultUserAgent(ctx)
 	if len(po.entry.ClientSecrets) == 0 {
 		return nil, errmark.MarkUser(provider.ErrMissingClientSecret)
 	}
@@ -132,6 +138,7 @@ func (po *providerOperations) ClientCredentials(ctx context.Context, opts ...pro
 }
 
 func (po *providerOperations) TokenExchange(ctx context.Context, t *provider.Token, opts ...provider.TokenExchangeOption) (*provider.Token, error) {
+	ctx = clientctx.WithDefaultUserAgent(ctx)
 	if len(po.entry.ClientSecrets) == 0 {
 		return nil, errmark.MarkUser(provider.ErrMissingClientSecret)
 	}

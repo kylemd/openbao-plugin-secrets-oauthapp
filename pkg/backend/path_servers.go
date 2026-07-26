@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/oauth2ext/clientctx"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/persistence"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/provider"
 	"github.com/openbao/openbao/sdk/v2/framework"
@@ -76,7 +75,6 @@ func (b *backend) serversUpdateOperation(ctx context.Context, req *logical.Reque
 
 	providerOptions := data.Get("provider_options").(map[string]string)
 
-	ctx = clientctx.WithDefaultUserAgent(ctx)
 	p, err := b.providerRegistry.New(ctx, providerName.(string), providerOptions)
 	if errors.Is(err, provider.ErrNoSuchProvider) {
 		return logical.ErrorResponse("provider %q does not exist", providerName), nil

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/oauth2ext/clientctx"
 	"github.com/puppetlabs/leg/errmap/pkg/errmark"
 )
 
@@ -52,6 +53,7 @@ func (r *Registry) NewAt(ctx context.Context, name string, vsn int, opts map[str
 		return nil, errmark.MarkUser(ErrNoSuchProvider)
 	}
 
+	ctx = clientctx.WithDefaultUserAgent(ctx)
 	p, err := fn(ctx, vsn, opts)
 	if err != nil {
 		return nil, errmark.MarkUserIf(err, errmark.RuleAny(

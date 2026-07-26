@@ -3,6 +3,6 @@
   "upstream_tag": "v3.4.0",
   "upstream_commit": "bf5cb0e7fb66274056ba823364ac42bca9969a1d",
   "go_version": "1.26.5",
-  "patch_revision": 2,
-  "release_tag": "v3.4.0-kyle.2"
+  "patch_revision": 3,
+  "release_tag": "v3.4.0-kyle.3"
 }

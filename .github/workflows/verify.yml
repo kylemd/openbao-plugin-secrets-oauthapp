@@ -148,11 +148,12 @@ jobs:
           tag="$(jq -r .release_tag fork-release.json)"
           upstream="$(jq -r .upstream_tag fork-release.json)"
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" dist/* --clobber
-          else
-            gh release create "$tag" dist/* \
-              --prerelease \
-              --target "$GITHUB_SHA" \
-              --title "OAuth application plugin $tag" \
-              --notes "OpenBao oauthapp $upstream with a neutral default user-agent compatibility patch. Built from the exact source commit with tests, race detection, vulnerability scanning, CodeQL, SBOM, and provenance."
+            target="$(gh release view "$tag" --json targetCommitish --jq .targetCommitish)"
+            echo "Release $tag is immutable at $target; verified main $GITHUB_SHA was not published."
+            exit 0
           fi
+          gh release create "$tag" dist/* \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "OAuth application plugin $tag" \
+            --notes "OpenBao oauthapp $upstream with a neutral default user-agent compatibility patch. Built from the exact source commit with tests, race detection, vulnerability scanning, CodeQL, SBOM, and provenance."

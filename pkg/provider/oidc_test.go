@@ -13,6 +13,8 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/oauth2ext/devicecode"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/oauth2ext/semerr"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/provider"
@@ -20,8 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
-	jose "gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 const testOIDCConfiguration = `
@@ -86,7 +86,7 @@ func TestOIDCFlow(t *testing.T) {
 			idToken, err := jwt.Signed(signer).
 				Claims(idClaims).
 				Claims(map[string]interface{}{"nonce": "baz"}).
-				CompactSerialize()
+				Serialize()
 			require.NoError(t, err)
 
 			resp := make(url.Values)
@@ -196,7 +196,7 @@ func TestOIDCRefreshWithIDToken(t *testing.T) {
 			idToken, err := jwt.Signed(signer).
 				Claims(idClaims).
 				Claims(map[string]interface{}{"grant_type": data.Get("grant_type")}).
-				CompactSerialize()
+				Serialize()
 			require.NoError(t, err)
 
 			resp.Set("token_type", "bearer")
@@ -351,7 +351,7 @@ func TestOIDCDeviceCodeFlow(t *testing.T) {
 					idToken, err := jwt.Signed(signer).
 						Claims(idClaims).
 						Claims(map[string]interface{}{"grant_type": data.Get("grant_type")}).
-						CompactSerialize()
+						Serialize()
 					require.NoError(t, err)
 
 					payload = map[string]interface{}{
@@ -458,7 +458,7 @@ func TestOIDCRefreshWithoutIDToken(t *testing.T) {
 				idToken, err := jwt.Signed(signer).
 					Claims(idClaims).
 					Claims(map[string]interface{}{"grant_type": data.Get("grant_type")}).
-					CompactSerialize()
+					Serialize()
 				require.NoError(t, err)
 
 				resp.Set("access_token", "abcd")

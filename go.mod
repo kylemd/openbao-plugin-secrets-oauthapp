@@ -6,6 +6,7 @@ toolchain go1.26.5
 
 require (
 	github.com/coreos/go-oidc v2.5.0+incompatible
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/golangci/golangci-lint/v2 v2.12.2
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-multierror v1.1.1
@@ -19,7 +20,6 @@ require (
 	github.com/puppetlabs/leg/timeutil v0.5.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.36.0
-	gopkg.in/square/go-jose.v2 v2.6.0
 	gotest.tools/gotestsum v1.13.0
 	k8s.io/utils v0.0.0-20230115233650-391b47cb4029
 )
@@ -109,7 +109,6 @@ require (
 	github.com/getsentry/raven-go v0.2.0 // indirect
 	github.com/ghostiam/protogetter v0.3.20 // indirect
 	github.com/go-critic/go-critic v0.14.3 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect

@@ -464,6 +464,75 @@ func TestMinimumSeconds(t *testing.T) {
 	}
 }
 
+func TestForceRefresh(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client := testutil.MockClient{
+		ID:     "abc",
+		Secret: "def",
+	}
+	exchange := testutil.RefreshableMockAuthCodeExchange(
+		testutil.IncrementMockAuthCodeExchange("forced_"),
+		func(_ int) (time.Duration, error) {
+			return time.Hour, nil
+		},
+	)
+	registry := provider.NewRegistry()
+	registry.MustRegister("mock", testutil.MockFactory(
+		testutil.MockWithAuthCodeExchange(client, exchange),
+	))
+	b, storage := backend.CreateBackendWithStorage(
+		t,
+		backend.Options{ProviderRegistry: registry},
+	)
+
+	resp, err := b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      backend.ServersPathPrefix + "mock",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"client_id":     client.ID,
+			"client_secret": client.Secret,
+			"provider":      "mock",
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError())
+
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      backend.CredsPathPrefix + "forced",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"server": "mock",
+			"code":   "forced",
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError())
+
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      backend.CredsPathPrefix + "forced",
+		Storage:   storage,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, "forced_1", resp.Data["access_token"])
+
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      backend.CredsPathPrefix + "forced",
+		Storage:   storage,
+		Data:      map[string]interface{}{"force_refresh": true},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.False(t, resp.IsError(), "response has error: %+v", resp.Error())
+	require.Equal(t, "forced_2", resp.Data["access_token"])
+}
+
 func TestServerDeletedFromUnderCred(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

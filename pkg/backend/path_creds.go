@@ -51,12 +51,14 @@ func credGrantTypes() (types []interface{}) {
 
 func (b *backend) credsReadOperation(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	expiryDelta := time.Duration(data.Get("minimum_seconds").(int)) * time.Second
+	forceRefresh := data.Get("force_refresh").(bool)
 
 	entry, err := b.getRefreshCredToken(
 		ctx,
 		req.Storage,
 		persistence.AuthCodeName(data.Get("name").(string)),
 		expiryDelta,
+		forceRefresh,
 	)
 	switch {
 	case err != nil:
@@ -358,6 +360,12 @@ var credsFields = map[string]*framework.FieldSchema{
 		Type:        framework.TypeDurationSecond,
 		Description: "Minimum remaining seconds to allow when reusing access token.",
 		Default:     0,
+		Query:       true,
+	},
+	"force_refresh": {
+		Type:        framework.TypeBool,
+		Description: "Refresh the credential even when its current access token remains valid.",
+		Default:     false,
 		Query:       true,
 	},
 	// fields for write operation

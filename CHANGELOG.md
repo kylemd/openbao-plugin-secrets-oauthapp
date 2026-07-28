@@ -8,6 +8,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+* Add an explicit `force_refresh` option for refresh-token credentials.
+
 ### Fixed
 
 * Send a neutral user-agent header for OAuth provider requests when no

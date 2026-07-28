@@ -407,6 +407,7 @@ Parameters:
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|----------|
 | `minimum_seconds` | Minimum additional duration to require the access token to be valid for. | Integer | 10<sup id="ret-3-a">[3](#footnote-3)</sup> | No |
+| `force_refresh` | Request a refresh even when the current access token remains valid. The refreshed token must still satisfy `minimum_seconds`. | Boolean | `false` | No |
 
 #### `PUT` (`write`)
 

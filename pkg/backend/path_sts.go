@@ -23,6 +23,7 @@ func (b *backend) stsReadOperation(ctx context.Context, req *logical.Request, da
 		req.Storage,
 		keyer,
 		expiryDelta,
+		false,
 	)
 	switch {
 	case err != nil:

@@ -34,7 +34,7 @@ func (rp *refreshProcess) Description() string {
 }
 
 func (rp *refreshProcess) Run(ctx context.Context) error {
-	_, err := rp.backend.getRefreshCredToken(ctx, rp.storage, rp.keyer, rp.expiryDelta)
+	_, err := rp.backend.getRefreshCredToken(ctx, rp.storage, rp.keyer, rp.expiryDelta, false)
 	return err
 }
 
@@ -99,7 +99,7 @@ func (rd *refreshDescriptor) Run(ctx context.Context, pc chan<- scheduler.Proces
 	return err
 }
 
-func (b *backend) refreshCredToken(ctx context.Context, storage logical.Storage, keyer persistence.AuthCodeKeyer, expiryDelta time.Duration) (*persistence.AuthCodeEntry, error) {
+func (b *backend) refreshCredToken(ctx context.Context, storage logical.Storage, keyer persistence.AuthCodeKeyer, expiryDelta time.Duration, force bool) (*persistence.AuthCodeEntry, error) {
 	ctx = clockctx.WithClock(ctx, b.clock)
 
 	var entry *persistence.AuthCodeEntry
@@ -112,7 +112,7 @@ func (b *backend) refreshCredToken(ctx context.Context, storage logical.Storage,
 		switch {
 		case err != nil || candidate == nil:
 			return err
-		case !candidate.TokenIssued() || b.tokenValid(candidate.Token.Token, expiryDelta) || candidate.RefreshToken == "":
+		case !candidate.TokenIssued() || (!force && b.tokenValid(candidate.Token.Token, expiryDelta)) || candidate.RefreshToken == "":
 			entry = candidate
 			return nil
 		}
@@ -150,14 +150,14 @@ func (b *backend) refreshCredToken(ctx context.Context, storage logical.Storage,
 	return entry, err
 }
 
-func (b *backend) getRefreshCredToken(ctx context.Context, storage logical.Storage, keyer persistence.AuthCodeKeyer, expiryDelta time.Duration) (*persistence.AuthCodeEntry, error) {
+func (b *backend) getRefreshCredToken(ctx context.Context, storage logical.Storage, keyer persistence.AuthCodeKeyer, expiryDelta time.Duration, force bool) (*persistence.AuthCodeEntry, error) {
 	entry, err := b.data.AuthCode.Manager(storage).ReadAuthCodeEntry(ctx, keyer)
 	switch {
 	case err != nil:
 		return nil, err
 	case entry == nil:
 		return nil, nil
-	case !entry.TokenIssued() || b.tokenValid(entry.Token.Token, expiryDelta):
+	case !entry.TokenIssued() || (!force && b.tokenValid(entry.Token.Token, expiryDelta)):
 		return entry, nil
 	default:
 		// If we're on a standby node, forward to the active before
@@ -168,7 +168,7 @@ func (b *backend) getRefreshCredToken(ctx context.Context, storage logical.Stora
 			return nil, logical.ErrReadOnly
 		}
 
-		return b.refreshCredToken(ctx, storage, keyer, expiryDelta)
+		return b.refreshCredToken(ctx, storage, keyer, expiryDelta, force)
 	}
 }
 

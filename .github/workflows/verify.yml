@@ -156,4 +156,4 @@ jobs:
             --prerelease \
             --target "$GITHUB_SHA" \
             --title "OAuth application plugin $tag" \
-            --notes "OpenBao oauthapp $upstream with a neutral default user-agent compatibility patch. Built from the exact source commit with tests, race detection, vulnerability scanning, CodeQL, SBOM, and provenance."
+            --notes "OpenBao oauthapp $upstream with explicit refresh-token credential refresh and a neutral default provider user agent. Built from the exact source commit with tests, race detection, vulnerability scanning, CodeQL, SBOM, and provenance."

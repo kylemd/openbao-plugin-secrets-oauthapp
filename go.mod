@@ -6,7 +6,7 @@ toolchain go1.26.5
 
 require (
 	github.com/coreos/go-oidc v2.5.0+incompatible
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/golangci/golangci-lint/v2 v2.12.2
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-multierror v1.1.1
